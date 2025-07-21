@@ -30,17 +30,17 @@ KaTeX に関してはかなり解決方法が簡単で，`react-katex`を使わ�
 import katex from "katex";
 
 type Props = {
-  math: string;
+	math: string;
 };
 
 export function Math({ math }: Props): JSX.Element {
-  return (
-    <div
-      dangerouslySetInnerHTML={{
-        __html: katex.renderToString(math, { displayMode: true }),
-      }}
-    />
-  );
+	return (
+		<div
+			dangerouslySetInnerHTML={{
+				__html: katex.renderToString(math, { displayMode: true }),
+			}}
+		/>
+	);
 }
 ```
 
@@ -59,22 +59,22 @@ import SyntaxHighlighter from "react-syntax-highlighter/dist/esm/prism";
 import { nord as style } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 type Props = {
-  code: string;
-  lang: string;
+	code: string;
+	lang: string;
 };
 
 export function Code({ code, lang }: Props): JSX.Element {
-  return (
-    <div>
-      <SyntaxHighlighter
-        language={lang ?? undefined}
-        style={style}
-        showLineNumbers
-      >
-        {code}
-      </SyntaxHighlighter>
-    </div>
-  );
+	return (
+		<div>
+			<SyntaxHighlighter
+				language={lang ?? undefined}
+				style={style}
+				showLineNumbers
+			>
+				{code}
+			</SyntaxHighlighter>
+		</div>
+	);
 }
 ```
 

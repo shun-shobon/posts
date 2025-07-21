@@ -47,13 +47,13 @@ npm install -D babel-plugin-react-compiler
 
 ```js
 export default defineConfig({
-  plugins: [
-    react({
-      babel: {
-        plugins: [["babel-plugin-react-compiler", {}]]
-      },
-    }),
-  ],
+	plugins: [
+		react({
+			babel: {
+				plugins: [["babel-plugin-react-compiler", {}]],
+			},
+		}),
+	],
 });
 ```
 
@@ -104,20 +104,20 @@ export function c(size: number) {
 
 ```js
 export default defineConfig({
-  plugins: [
-    react({
-      babel: {
-        plugins: [
-          [
-            "babel-plugin-react-compiler",
-            {
-              runtimeModule: path.resolve("src/react-compiler-runtime"),
-            },
-          ],
-        ],
-      },
-    }),
-  ],
+	plugins: [
+		react({
+			babel: {
+				plugins: [
+					[
+						"babel-plugin-react-compiler",
+						{
+							runtimeModule: path.resolve("src/react-compiler-runtime"),
+						},
+					],
+				],
+			},
+		}),
+	],
 });
 ```
 
@@ -142,21 +142,21 @@ export default defineConfig({
 
 ```js
 export default defineConfig({
-  plugins: [
-    react({
-      babel: {
-        plugins: [
-          [
-            "babel-plugin-react-compiler",
-            {
-              runtimeModule: path.resolve("src/react-compiler-runtime"),
-              compilationMode: "annotation",
-            },
-          ],
-        ],
-      },
-    }),
-  ],
+	plugins: [
+		react({
+			babel: {
+				plugins: [
+					[
+						"babel-plugin-react-compiler",
+						{
+							runtimeModule: path.resolve("src/react-compiler-runtime"),
+							compilationMode: "annotation",
+						},
+					],
+				],
+			},
+		}),
+	],
 });
 ```
 
@@ -165,9 +165,9 @@ export default defineConfig({
 
 ```tsx
 function MyComponent() {
-  "use memo";
+	"use memo";
 
-  return <div>"Hello, world!"</div>;
+	return <div>"Hello, world!"</div>;
 }
 ```
 
@@ -182,7 +182,7 @@ function MyComponent() {
 今回はReact v18でReact Compilerを使う方法と、一部のコンポーネントだけをReact Compilerで最適化する方法を紹介しました。
 React Compilerはまだベータ版であり、本番環境で利用するのはリスクが伴いますが、徐々に導入していくことでパフォーマンス向上が期待できます。
 
-また、React Compilerの中身を[@yossydev](https://x.com/yossydev)、[@re_taro_](https://x.com/re_taro_)と一緒に読む動画も公開しているので、興味があればぜひご覧ください。
+また、React Compilerの中身を[@yossydev](https://x.com/yossydev)、[@re*taro*](https://x.com/re_taro_)と一緒に読む動画も公開しているので、興味があればぜひご覧ください。
 
 [React Compiler Code reading #1](https://www.youtube.com/watch?v=PqPgr_hlVKM)
 

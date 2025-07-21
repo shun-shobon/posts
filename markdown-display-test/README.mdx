@@ -41,9 +41,9 @@ import { Aside, Details, LinkCard, Tweet } from "@/components/posts";
 
 ## テキスト装飾（Text Styling）
 
-- **太字（Bold）** または __太字（Bold）__
-- *斜体（Italic）* または _斜体（Italic）_
-- ***太字斜体（Bold Italic）*** または ___太字斜体（Bold Italic）___
+- **太字（Bold）** または **太字（Bold）**
+- _斜体（Italic）_ または _斜体（Italic）_
+- **_太字斜体（Bold Italic）_** または **_太字斜体（Bold Italic）_**
 - ~~取り消し線（Strikethrough）~~
 - `インラインコード（Inline Code）`
 
@@ -105,10 +105,10 @@ import { Aside, Details, LinkCard, Tweet } from "@/components/posts";
 ```javascript title="greet.js"
 // JavaScript の例
 function greet(name) {
-  console.log(`Hello, ${name}!`);
+	console.log(`Hello, ${name}!`);
 }
 
-greet('World');
+greet("World");
 ```
 
 ```python title="fibonacci.py"
@@ -132,34 +132,34 @@ ls -la
 > 複数行にわたる引用も可能です。
 
 > ### 引用内の見出し
-> 
+>
 > 引用内に**太字**や*斜体*、`コード`も使用できます。
-> 
+>
 > > ネストした引用も可能です。
 
 ## 表（Tables）
 
-| 左寄せ | 中央寄せ | 右寄せ |
-|:-------|:--------:|-------:|
-| セル1  | セル2    | セル3  |
-| 長いセルの内容 | 短い | 123 |
-| A | B | C |
+| 左寄せ         | 中央寄せ | 右寄せ |
+| :------------- | :------: | -----: |
+| セル1          |  セル2   |  セル3 |
+| 長いセルの内容 |   短い   |    123 |
+| A              |    B     |      C |
 
 ### 複雑な表
 
-| 項目 | 説明 | ステータス | 優先度 |
-|------|------|-----------|--------|
-| Markdown解析 | GFM対応 | ✅ 完了 | 高 |
-| シンタックスハイライト | コードブロック | 🚧 進行中 | 中 |
-| 画像表示 | レスポンシブ対応 | ❌ 未着手 | 低 |
+| 項目                   | 説明             | ステータス | 優先度 |
+| ---------------------- | ---------------- | ---------- | ------ |
+| Markdown解析           | GFM対応          | ✅ 完了    | 高     |
+| シンタックスハイライト | コードブロック   | 🚧 進行中  | 中     |
+| 画像表示               | レスポンシブ対応 | ❌ 未着手  | 低     |
 
 ## 水平線（Horizontal Rules）
 
 ---
 
-***
+---
 
-___
+---
 
 ## エスケープ文字（Escape Characters）
 
@@ -183,6 +183,7 @@ Markdownの特殊文字をエスケープ：
 インライン数式： $E = mc^2$
 
 ブロック数式：
+
 ```math
 \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
 ```
@@ -192,6 +193,7 @@ Markdownの特殊文字をエスケープ：
 これは脚注のサンプルです[^1]。複数の脚注も可能です[^note2]。
 
 [^1]: これは最初の脚注です。
+
 [^note2]: これは2番目の脚注で、より長い説明を含んでいます。複数行にわたって記述することも可能です。
 
 ## コードブロック内の特殊記法
@@ -208,10 +210,10 @@ Markdownの特殊文字をエスケープ：
 
 ```json
 {
-  "name": "markdown-test",
-  "version": "1.0.0",
-  "description": "Markdownテスト用のサンプルJSON",
-  "keywords": ["markdown", "test", "json"]
+	"name": "markdown-test",
+	"version": "1.0.0",
+	"description": "Markdownテスト用のサンプルJSON",
+	"keywords": ["markdown", "test", "json"]
 }
 ```
 
@@ -219,20 +221,20 @@ Markdownの特殊文字をエスケープ：
 
 ### 表内のリンクとコード
 
-| 言語 | 公式サイト | サンプルコード |
-|------|------------|----------------|
-| JavaScript | [MDN](https://developer.mozilla.org/) | `console.log('Hello')` |
-| Python | [Python.org](https://python.org/) | `print('Hello')` |
-| Rust | [Rust-lang.org](https://www.rust-lang.org/) | `println!("Hello")` |
+| 言語       | 公式サイト                                  | サンプルコード         |
+| ---------- | ------------------------------------------- | ---------------------- |
+| JavaScript | [MDN](https://developer.mozilla.org/)       | `console.log('Hello')` |
+| Python     | [Python.org](https://python.org/)           | `print('Hello')`       |
+| Rust       | [Rust-lang.org](https://www.rust-lang.org/) | `println!("Hello")`    |
 
 ### 引用内のリストとコード
 
 > #### 重要な注意事項
-> 
+>
 > 1. コードは適切にテストしてください
 > 2. 以下のサンプルを参考にしてください：
 >    ```javascript
->    const test = 'validation';
+>    const test = "validation";
 >    ```
 > 3. エラーハンドリングも忘れずに
 
@@ -243,25 +245,25 @@ Markdownの特殊文字をエスケープ：
 <Aside>
   これはインフォーメーションです。
 
-  もちろん複数行のテキストも表示できますし、*斜体*や**太字**や`コード`も使用できます。
+もちろん複数行のテキストも表示できますし、*斜体*や**太字**や`コード`も使用できます。
 
-  あまり一般的ではないですが、コードブロックも使用できます。
+あまり一般的ではないですが、コードブロックも使用できます。
 
-  ```javascript
-  const test = 'validation';
-  ```
+```javascript
+const test = "validation";
+```
+
 </Aside>
 
-<Aside type="warn">
-  これは注意です。
-</Aside>
+<Aside type="warn">これは注意です。</Aside>
 
-<Aside type="alert">
-  これは危険です。
-</Aside>
+<Aside type="alert">これは危険です。</Aside>
 
-<Aside type="info" title="title属性を使用することによって、上に表示されるタイトルも変更できます。">
-  これはインフォーメーションです。
+<Aside
+	type="info"
+	title="title属性を使用することによって、上に表示されるタイトルも変更できます。"
+>
+	これはインフォーメーションです。
 </Aside>
 
 ### 折りたたみ
@@ -269,22 +271,24 @@ Markdownの特殊文字をエスケープ：
 <Details summary="クリックして展開">
   これは折りたたみです。
 
-  折りたたみ内には、Markdownの記法がそのまま使用できます。
-  もちろん、コードブロックなども使用可能です。
+折りたたみ内には、Markdownの記法がそのまま使用できます。
+もちろん、コードブロックなども使用可能です。
 
-  ```javascript title="test.js"
-  function test() {
-    console.log('test');
-  }
+```javascript title="test.js"
+function test() {
+	console.log("test");
+}
 
-  test();
-  ```
+test();
+```
+
 </Details>
 
-<Details summary="open属性を使用することで、初期状態で展開された状態にできます。" open>
-  <Aside>
-    MDXコンポーネントをネストすることもできます。
-  </Aside>
+<Details
+	summary="open属性を使用することで、初期状態で展開された状態にできます。"
+	open
+>
+	<Aside>MDXコンポーネントをネストすることもできます。</Aside>
 </Details>
 
 ### リンクカード
@@ -300,9 +304,9 @@ Markdownの特殊文字をエスケープ：
 <LinkCard href="https://verylongurlverylongurlverylongurlverylongurlverylongurlverylongurlverylongurlverylongurlverylongurlverylongurlverylongurlverylongurlverylongurlverylongurlverylongurl.example.com" />
 
 <Details summary="ネストのテスト" open>
-  <Aside>
-    <LinkCard href="https://qiita.com/Qiita/items/c686397e4a0f4f11683d" />
-  </Aside>
+	<Aside>
+		<LinkCard href="https://qiita.com/Qiita/items/c686397e4a0f4f11683d" />
+	</Aside>
 </Details>
 
 ### ツイート
@@ -329,4 +333,4 @@ Markdownの特殊文字をエスケープ：
 
 ---
 
-*最終更新: 2024年12月12日* 
+_最終更新: 2024年12月12日_

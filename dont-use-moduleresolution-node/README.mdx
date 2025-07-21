@@ -56,17 +56,17 @@ JS ファイルが import されたとき、その JS ファイルに最も近�
 
 ```json title="package.json"
 {
-  "name": "package",
-  "exports": {
-    ".": {
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.mjs"
-    },
-    "./subpath": {
-      "require": "./dist/subpath.cjs",
-      "import": "./dist/subpath.mjs"
-    }
-  }
+	"name": "package",
+	"exports": {
+		".": {
+			"require": "./dist/index.cjs",
+			"import": "./dist/index.mjs"
+		},
+		"./subpath": {
+			"require": "./dist/subpath.cjs",
+			"import": "./dist/subpath.mjs"
+		}
+	}
 }
 ```
 
@@ -121,14 +121,14 @@ TypeScript ではモジュール解決の方法を`tsconfig.json`の`moduleResol
 
 ```json title="package.json"
 {
-  "name": "package",
-  "main": "./index.cjs",
-  "exports": {
-    ".": {
-      "require": "./commonjs/index.cjs",
-      "import": "./esm/index.mjs"
-    }
-  }
+	"name": "package",
+	"main": "./index.cjs",
+	"exports": {
+		".": {
+			"require": "./commonjs/index.cjs",
+			"import": "./esm/index.mjs"
+		}
+	}
 }
 ```
 
@@ -159,14 +159,14 @@ ES Modules を使用する場合は**TypeScript でも import 先を`.js`の拡�
 
 ```json title="package.json"
 {
-  "name": "package",
-  "main": "./index.cjs",
-  "exports": {
-    ".": {
-      "require": "./commonjs/index.cjs",
-      "import": "./esm/index.mjs"
-    }
-  }
+	"name": "package",
+	"main": "./index.cjs",
+	"exports": {
+		".": {
+			"require": "./commonjs/index.cjs",
+			"import": "./esm/index.mjs"
+		}
+	}
 }
 ```
 
@@ -190,14 +190,14 @@ ES Modules のように`exports`は`import`が使用されます。また、`exp
 
 ```json title="package.json"
 {
-  "name": "package",
-  "main": "./index.cjs",
-  "exports": {
-    ".": {
-      "require": "./commonjs/index.cjs",
-      "import": "./esm/index.mjs"
-    }
-  }
+	"name": "package",
+	"main": "./index.cjs",
+	"exports": {
+		".": {
+			"require": "./commonjs/index.cjs",
+			"import": "./esm/index.mjs"
+		}
+	}
 }
 ```
 

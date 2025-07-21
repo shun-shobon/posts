@@ -122,24 +122,24 @@ JavaScript にはバイナリ操作全般を扱うための `ArrayBuffer` と `T
 
 ```typescript
 export function createIco(
-  width: number,
-  height: number,
-  pixels: Uint8Array | Uint8ClampedArray
+	width: number,
+	height: number,
+	pixels: Uint8Array | Uint8ClampedArray,
 ): Uint8Array {
-  const bmpHeight = height * 2;
-  const bmpImageSize = bmpHeight * width * 4;
-  const bmpSize = BMP_INFO_HEADER_SIZE + bmpImageSize;
+	const bmpHeight = height * 2;
+	const bmpImageSize = bmpHeight * width * 4;
+	const bmpSize = BMP_INFO_HEADER_SIZE + bmpImageSize;
 
-  const bufferSize = ICO_HEADER_SIZE + ICO_DIR_ENTRY_SIZE + bmpSize;
-  const buffer = new ArrayBuffer(bufferSize);
-  const cursor = new Cursor(buffer);
+	const bufferSize = ICO_HEADER_SIZE + ICO_DIR_ENTRY_SIZE + bmpSize;
+	const buffer = new ArrayBuffer(bufferSize);
+	const cursor = new Cursor(buffer);
 
-  // Write ICO header.
-  cursor.writeUint16(0); // Reserved.
-  cursor.writeUint16(1); // Type.
-  cursor.writeUint16(1); // Number of images.
+	// Write ICO header.
+	cursor.writeUint16(0); // Reserved.
+	cursor.writeUint16(1); // Type.
+	cursor.writeUint16(1); // Number of images.
 
-  // ...
+	// ...
 }
 ```
 

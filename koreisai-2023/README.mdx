@@ -96,56 +96,56 @@ PCで閲覧するならともかく、狭いスマホの画面で41企画を1ペ
 
 ```tsx
 export function EventQuery({
-  filter,
-  onChangeFilter,
+	filter,
+	onChangeFilter,
 }: EventQueryProps): ReactNode {
-  const selectedLebel = filterList.find((item) => item.value === filter)?.label;
+	const selectedLebel = filterList.find((item) => item.value === filter)?.label;
 
-  return (
-    <form className={styles.query}>
-      <div className={styles.listbox}>
-        <Listbox value={filter} onChange={onChangeFilter}>
-          <Listbox.Button className={styles.button}>
-            {({ open }) => (
-              <>
-                {selectedLebel}
-                <LiaAngleDownSolid
-                  className={clsx(
-                    styles.buttonIcon,
-                    open && styles.buttonIconOpen,
-                  )}
-                />
-              </>
-            )}
-          </Listbox.Button>
-          <Transition
-            as={Fragment}
-            leave={styles.optionsLeave}
-            leaveFrom={styles.optionsLeaveFrom}
-            leaveTo={styles.optionsLeaveTo}
-          >
-            <Listbox.Options className={styles.options}>
-              {filterList.map((item) => (
-                <Listbox.Option
-                  key={item.value}
-                  value={item.value}
-                  className={({ active, selected }) =>
-                    clsx(
-                      styles.option,
-                      active && styles.optionActive,
-                      selected && styles.optionSelected,
-                    )
-                  }
-                >
-                  {item.label}
-                </Listbox.Option>
-              ))}
-            </Listbox.Options>
-          </Transition>
-        </Listbox>
-      </div>
-    </form>
-  );
+	return (
+		<form className={styles.query}>
+			<div className={styles.listbox}>
+				<Listbox value={filter} onChange={onChangeFilter}>
+					<Listbox.Button className={styles.button}>
+						{({ open }) => (
+							<>
+								{selectedLebel}
+								<LiaAngleDownSolid
+									className={clsx(
+										styles.buttonIcon,
+										open && styles.buttonIconOpen,
+									)}
+								/>
+							</>
+						)}
+					</Listbox.Button>
+					<Transition
+						as={Fragment}
+						leave={styles.optionsLeave}
+						leaveFrom={styles.optionsLeaveFrom}
+						leaveTo={styles.optionsLeaveTo}
+					>
+						<Listbox.Options className={styles.options}>
+							{filterList.map((item) => (
+								<Listbox.Option
+									key={item.value}
+									value={item.value}
+									className={({ active, selected }) =>
+										clsx(
+											styles.option,
+											active && styles.optionActive,
+											selected && styles.optionSelected,
+										)
+									}
+								>
+									{item.label}
+								</Listbox.Option>
+							))}
+						</Listbox.Options>
+					</Transition>
+				</Listbox>
+			</div>
+		</form>
+	);
 }
 ```
 
@@ -181,13 +181,13 @@ export const timetableDuration = createVar();
 
 // タイムテーブル全体
 export const timetable = style({
-  display: "grid",
-  gridTemplateColumns:
-    "[time-start] auto [time-end program-start] 1fr [program-end]",
-  gridTemplateRows: `auto repeat(calc(${timetableDuration} / 5), 1fr)`,
-  lineHeight: 1,
-  maxWidth: "600px",
-  marginInline: "auto",
+	display: "grid",
+	gridTemplateColumns:
+		"[time-start] auto [time-end program-start] 1fr [program-end]",
+	gridTemplateRows: `auto repeat(calc(${timetableDuration} / 5), 1fr)`,
+	lineHeight: 1,
+	maxWidth: "600px",
+	marginInline: "auto",
 });
 
 export const timeStart = createVar();
@@ -195,20 +195,20 @@ export const timeEnd = createVar();
 
 // 時間ごとの横線
 export const timeBorder = style({
-  gridColumn: "time-end / -1",
-  gridRow: `calc(${timeStart} + 1) / span 1`,
-  borderTop: `1px dotted ${vars.color.border}`,
-  zIndex: -1,
+	gridColumn: "time-end / -1",
+	gridRow: `calc(${timeStart} + 1) / span 1`,
+	borderTop: `1px dotted ${vars.color.border}`,
+	zIndex: -1,
 });
 
 // スケジュール
 export const program = style({
-  gridColumn: "program-start / program-end",
-  gridRow: `calc(${timeStart} + 1) / calc(${timeEnd} + 1)`,
-  margin: "0.25rem",
-  padding: "0.25rem",
-  color: vars.color.textAccent,
-  borderRadius: "0.25rem",
+	gridColumn: "program-start / program-end",
+	gridRow: `calc(${timeStart} + 1) / calc(${timeEnd} + 1)`,
+	margin: "0.25rem",
+	padding: "0.25rem",
+	color: vars.color.textAccent,
+	borderRadius: "0.25rem",
 });
 ```
 
@@ -257,56 +257,56 @@ JavaScriptのDateはとても扱いづらいことで有名ですが、Temporal�
 
 ```tsx
 const festivalStart = Temporal.ZonedDateTime.from(
-  "2023-10-21T09:30:00+09:00[Asia/Tokyo]",
+	"2023-10-21T09:30:00+09:00[Asia/Tokyo]",
 );
 const festivalEnd = Temporal.ZonedDateTime.from(
-  "2023-10-22T15:30:00+09:00[Asia/Tokyo]",
+	"2023-10-22T15:30:00+09:00[Asia/Tokyo]",
 );
 type FestivalState = "before" | "during" | "after";
 
 export function CountdownTimer(): ReactNode {
-  const [diff, setDiff] = useState(Temporal.Duration.from({ seconds: 0 }));
-  const [festivalState, setFestivalState] = useState<FestivalState>("before");
+	const [diff, setDiff] = useState(Temporal.Duration.from({ seconds: 0 }));
+	const [festivalState, setFestivalState] = useState<FestivalState>("before");
 
-  useEffect(() => {
-    const update = () => {
-      const now = Temporal.Now.zonedDateTimeISO("Asia/Tokyo");
+	useEffect(() => {
+		const update = () => {
+			const now = Temporal.Now.zonedDateTimeISO("Asia/Tokyo");
 
-      // 工嶺祭前
-      if (Temporal.ZonedDateTime.compare(now, festivalStart) < 0) {
-        setDiff(
-          now.until(festivalStart, {
-            largestUnit: "day", // 最大単位を日に設定
-            smallestUnit: "second", // 最小単位を秒に設定
-          }),
-        );
-        setFestivalState("before");
-        return;
-      }
-      // 工嶺祭中
-      if (Temporal.ZonedDateTime.compare(now, festivalEnd) < 0) {
-        setDiff(
-          now.until(festivalEnd, {
-            largestUnit: "day",
-            smallestUnit: "second",
-          }),
-        );
-        setFestivalState("during");
-        return;
-      }
+			// 工嶺祭前
+			if (Temporal.ZonedDateTime.compare(now, festivalStart) < 0) {
+				setDiff(
+					now.until(festivalStart, {
+						largestUnit: "day", // 最大単位を日に設定
+						smallestUnit: "second", // 最小単位を秒に設定
+					}),
+				);
+				setFestivalState("before");
+				return;
+			}
+			// 工嶺祭中
+			if (Temporal.ZonedDateTime.compare(now, festivalEnd) < 0) {
+				setDiff(
+					now.until(festivalEnd, {
+						largestUnit: "day",
+						smallestUnit: "second",
+					}),
+				);
+				setFestivalState("during");
+				return;
+			}
 
-      // 工嶺祭後
-      setDiff(Temporal.Duration.from({ seconds: 0 }));
-      setFestivalState("after");
-    };
+			// 工嶺祭後
+			setDiff(Temporal.Duration.from({ seconds: 0 }));
+			setFestivalState("after");
+		};
 
-    update();
+		update();
 
-    const id = setInterval(update, 1000);
-    return () => clearInterval(id);
-  }, [setDiff]);
+		const id = setInterval(update, 1000);
+		return () => clearInterval(id);
+	}, [setDiff]);
 
-  // ...
+	// ...
 }
 ```
 
@@ -321,17 +321,17 @@ export function CountdownTimer(): ReactNode {
 
 ```tsx
 return (
-  <video
-    muted
-    playsInline
-    loop
-    controls
-    ref={videoRef}
-    className={styles.video}
-  >
-    <source src="/assets/cm.webm" type="video/webm" />
-    <source src="/assets/cm.mp4" type="video/mp4" />
-  </video>
+	<video
+		muted
+		playsInline
+		loop
+		controls
+		ref={videoRef}
+		className={styles.video}
+	>
+		<source src="/assets/cm.webm" type="video/webm" />
+		<source src="/assets/cm.mp4" type="video/mp4" />
+	</video>
 );
 ```
 
@@ -352,8 +352,8 @@ Webフォント、特に日本語フォントはファイルサイズが大き�
 import localFont from "next/font/local";
 
 const font = localFont({
-  src: "../assets/SourceHanSansJP-VF.otf.woff2",
-  fallback: ["sans-serif"],
+	src: "../assets/SourceHanSansJP-VF.otf.woff2",
+	fallback: ["sans-serif"],
 });
 ```
 
@@ -474,19 +474,19 @@ import next from "@shun-shobon/eslint-config-next/flat";
 import react from "@shun-shobon/eslint-config-react/flat";
 
 export default [
-  ...base,
-  ...react,
-  ...next,
-  {
-    languageOptions: {
-      parserOptions: {
-        project: "./tsconfig.json",
-      },
-    },
-  },
-  {
-    ignores: [".next/", "storybook-static/", "out/"],
-  },
+	...base,
+	...react,
+	...next,
+	{
+		languageOptions: {
+			parserOptions: {
+				project: "./tsconfig.json",
+			},
+		},
+	},
+	{
+		ignores: [".next/", "storybook-static/", "out/"],
+	},
 ];
 ```
 

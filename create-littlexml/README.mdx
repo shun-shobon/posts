@@ -1,5 +1,4 @@
 ---
-
 title: 1kB の XML ビルダーを作った
 tags:
   - Tech
@@ -26,20 +25,20 @@ Cloudflare workers などの Edge ランタイムでの動作を考慮してい�
 import { element, renderToString } from "@shun-shobon/littlexml";
 
 const root = element("urlset")
-  .attr("xmlns", "http://www.sitemaps.org/schemas/sitemap/0.9")
-  .attr("xmlns:image", "http://www.google.com/schemas/sitemap-image/1.1")
-  .child(
-    element("url")
-      .child(element("loc").text("https://example.com/"))
-      .child(element("lastmod").text("2020-01-01"))
-      .child(element("changefreq").text("daily"))
-      .child(element("priority").text("0.8"))
-      .child(
-        element("image:image")
-          .child(element("image:loc").text("https://example.com/image.png"))
-          .child(element("image:caption").text("caption"))
-      )
-  );
+	.attr("xmlns", "http://www.sitemaps.org/schemas/sitemap/0.9")
+	.attr("xmlns:image", "http://www.google.com/schemas/sitemap-image/1.1")
+	.child(
+		element("url")
+			.child(element("loc").text("https://example.com/"))
+			.child(element("lastmod").text("2020-01-01"))
+			.child(element("changefreq").text("daily"))
+			.child(element("priority").text("0.8"))
+			.child(
+				element("image:image")
+					.child(element("image:loc").text("https://example.com/image.png"))
+					.child(element("image:caption").text("caption")),
+			),
+	);
 
 const xml = renderToString(root, { version: "1.0", indent: 2 });
 
@@ -101,43 +100,43 @@ Iterator の出力には[ジェネレータ関数](https://developer.mozilla.org
 ```ts
 // XMLの要素を表すクラス
 class Element {
-  #name: string;
-  #attributes: Map<string, string> = new Map();
-  #children?: Content;
+	#name: string;
+	#attributes: Map<string, string> = new Map();
+	#children?: Content;
 
-  constructor(name: string) {
-    this.#name = name;
-  }
+	constructor(name: string) {
+		this.#name = name;
+	}
 
-  // 文字列のIteratorを出力する
-  *toStringIterator(
-    indentType: IndentType,
-    level: number
-  ): IterableIterator<string> {
-    const indent = createIndent(indentType, level);
+	// 文字列のIteratorを出力する
+	*toStringIterator(
+		indentType: IndentType,
+		level: number,
+	): IterableIterator<string> {
+		const indent = createIndent(indentType, level);
 
-    yield `${indent}<${this.#name}`;
+		yield `${indent}<${this.#name}`;
 
-    for (const [key, value] of this.#attributes.entries()) {
-      yield ` ${key}="${escapeStr(value)}"`;
-    }
+		for (const [key, value] of this.#attributes.entries()) {
+			yield ` ${key}="${escapeStr(value)}"`;
+		}
 
-    if (this.#children === undefined) {
-      yield " />";
-      return;
-    }
+		if (this.#children === undefined) {
+			yield " />";
+			return;
+		}
 
-    if (typeof this.#children === "string") {
-      yield `>${escapeStr(this.#children)}</${this.#name}>`;
-      return;
-    }
+		if (typeof this.#children === "string") {
+			yield `>${escapeStr(this.#children)}</${this.#name}>`;
+			return;
+		}
 
-    yield ">";
-    for (const child of this.#children) {
-      yield* child.toStringIterator(indentType, level + 1);
-    }
-    yield `${indent}</${this.#name}>`;
-  }
+		yield ">";
+		for (const child of this.#children) {
+			yield* child.toStringIterator(indentType, level + 1);
+		}
+		yield `${indent}</${this.#name}>`;
+	}
 }
 ```
 
@@ -173,27 +172,27 @@ Web Stream API は ブラウザ標準の API で、Node.js でも Experimental �
 
 ```ts
 export function renderToStream(
-  root: Element,
-  options?: RenderOption
+	root: Element,
+	options?: RenderOption,
 ): ReadableStream<string> {
-  // Iterator を作成
-  const iterator = renderToIterator(root, options);
+	// Iterator を作成
+	const iterator = renderToIterator(root, options);
 
-  // ReadableStream を作成
-  return new ReadableStream({
-    // 内部キューがいっぱいになっていないときに呼ばれる関数
-    pull(controller) {
-      // Iterator から値を取り出す
-      const { done, value } = iterator.next();
-      if (done) {
-        // Iterator が終了したらストリームを閉じる
-        controller.close();
-      } else {
-        // Iterator から取り出した値をストリームの内部キューに追加する
-        controller.enqueue(value);
-      }
-    },
-  });
+	// ReadableStream を作成
+	return new ReadableStream({
+		// 内部キューがいっぱいになっていないときに呼ばれる関数
+		pull(controller) {
+			// Iterator から値を取り出す
+			const { done, value } = iterator.next();
+			if (done) {
+				// Iterator が終了したらストリームを閉じる
+				controller.close();
+			} else {
+				// Iterator から取り出した値をストリームの内部キューに追加する
+				controller.enqueue(value);
+			}
+		},
+	});
 }
 ```
 
@@ -205,13 +204,13 @@ export function renderToStream(
 
 ```ts
 const root = element("urlset")
-  .attr("xmlns", "http://www.sitemaps.org/schemas/sitemap/0.9")
-  .attr("xmlns:image", "http://www.google.com/schemas/sitemap-image/1.1")
-  .child(
-    element("url")
-      .child(element("loc").text("https://example.com/"))
-      .child(element("lastmod").text("2020-01-01"))
-  );
+	.attr("xmlns", "http://www.sitemaps.org/schemas/sitemap/0.9")
+	.attr("xmlns:image", "http://www.google.com/schemas/sitemap-image/1.1")
+	.child(
+		element("url")
+			.child(element("loc").text("https://example.com/"))
+			.child(element("lastmod").text("2020-01-01")),
+	);
 
 // 文字列のストリームを作成
 const strStream = renderToStream(root);
@@ -234,27 +233,27 @@ import { build, emptyDir } from "https://deno.land/x/dnt@0.33.1/mod.ts";
 await emptyDir("./npm");
 
 await build({
-  // 入力ファイル
-  entryPoints: ["./mod.ts"],
-  outDir: "./npm",
-  // テスト用にNode.js向けのDenoのpolyfillを追加
-  shims: {
-    deno: {
-      test: "dev",
-    },
-  },
-  // tsconfig.jsonの設定
-  compilerOptions: {
-    lib: ["dom", "esnext"],
-  },
-  // package.jsonの設定
-  package: {
-    name: "@shun-shobon/littlexml",
-    version: "0.5.0",
-    main: "./script/mod.js",
-    unpkg: "./esm/mod.js",
-    sideEffects: false,
-  },
+	// 入力ファイル
+	entryPoints: ["./mod.ts"],
+	outDir: "./npm",
+	// テスト用にNode.js向けのDenoのpolyfillを追加
+	shims: {
+		deno: {
+			test: "dev",
+		},
+	},
+	// tsconfig.jsonの設定
+	compilerOptions: {
+		lib: ["dom", "esnext"],
+	},
+	// package.jsonの設定
+	package: {
+		name: "@shun-shobon/littlexml",
+		version: "0.5.0",
+		main: "./script/mod.js",
+		unpkg: "./esm/mod.js",
+		sideEffects: false,
+	},
 });
 
 // LICENSEとREADME.mdをコピー
