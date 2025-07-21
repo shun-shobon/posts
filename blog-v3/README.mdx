@@ -93,7 +93,7 @@ Astroとの統合機能があるため、すぐに導入できます。
 ```typescript title="test.ts"
 // Expressive Codeを使用すると、このようなコードブロックが作れます。
 function hello(name: string): void {
-  console.log(`Hello, ${name}!`);
+	console.log(`Hello, ${name}!`);
 }
 
 hello("World");
@@ -107,6 +107,7 @@ hello("World");
 もちろん素のTailwind CSSのデザイントークンをそのまま使用すると破綻するため、独自のデザイントークンを定義しています。
 
 <Details summary="デザイントークンの定義(抜粋)">
+
 ```css title="src/styles/global.css"
 @theme {
 	--color-text-primary: var(--color-neutral-800);
@@ -141,6 +142,7 @@ hello("World");
 		linear-gradient(90deg, var(--color-border-primary) 1px, transparent 1px);
 }
 ```
+
 </Details>
 
 ### Figmaでのデザイン
