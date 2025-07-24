@@ -25,20 +25,20 @@ AstroにはContents CollectionというMarkdownやMDXファイルをコレクシ
 
 ```html
 <img
-  src="/_astro/image.xxx.webp"
-  alt="alt"
-  loading="lazy"
-  decoding="async"
-  fetchpriority="auto"
-  width="1920"
-  height="1080"
+	src="/_astro/image.xxx.webp"
+	alt="alt"
+	loading="lazy"
+	decoding="async"
+	fetchpriority="auto"
+	width="1920"
+	height="1080"
 />
 ```
 
 `<img>`タグを見てみると、画像がWebPに変換され、画像サイズや遅延読み込みなどの属性が設定されていることがわかります。
 
 <Aside type="warn">
-画像最適化がかかるのはローカルの画像のみです。リモート画像の場合は`astro.config.js`で明示的に許可をする必要があります。
+	画像最適化がかかるのはローカルの画像のみです。リモート画像の場合は`astro.config.js`で明示的に許可をする必要があります。
 </Aside>
 
 このままでもWebP変換といった最低限の最適化が行われますが、画像サイズは元画像のままなので、元画像が非常に大きなサイズの場合は、結局画像の読み込みに時間がかかってしまいます。
@@ -55,11 +55,11 @@ AstroにはContents CollectionというMarkdownやMDXファイルをコレクシ
 
 ```js title="astro.config.js"
 export default defineConfig({
-  // ...
-  image: {
-    layout: "constrained",
-  },
-  // ...
+	// ...
+	image: {
+		layout: "constrained",
+	},
+	// ...
 });
 ```
 
@@ -67,25 +67,25 @@ export default defineConfig({
 
 ```html
 <img
-  src="/_astro/image.xxx.webp"
-  srcset="
-    /_astro/image.xxx.webp 640w,
-    /_astro/image.xxx.webp 750w,
-    /_astro/image.xxx.webp 828w,
-    /_astro/image.xxx.webp 1080w,
-    /_astro/image.xxx.webp 1280w,
-    /_astro/image.xxx.webp 1668w,
-    /_astro/image.xxx.webp 1920w
-  "
-  alt="alt"
-  loading="lazy"
-  decoding="async"
-  fetchpriority="auto"
-  sizes="(min-width: 1920px) 1920px, 100vw"
-  style="--fit: cover; --pos: center;"
-  data-astro-image="constrained"
-  width="1920"
-  height="1080"
+	src="/_astro/image.xxx.webp"
+	srcset="
+		/_astro/image.xxx.webp  640w,
+		/_astro/image.xxx.webp  750w,
+		/_astro/image.xxx.webp  828w,
+		/_astro/image.xxx.webp 1080w,
+		/_astro/image.xxx.webp 1280w,
+		/_astro/image.xxx.webp 1668w,
+		/_astro/image.xxx.webp 1920w
+	"
+	alt="alt"
+	loading="lazy"
+	decoding="async"
+	fetchpriority="auto"
+	sizes="(min-width: 1920px) 1920px, 100vw"
+	style="--fit: cover; --pos: center;"
+	data-astro-image="constrained"
+	width="1920"
+	height="1080"
 />
 ```
 
@@ -124,12 +124,7 @@ const { src, alt, title } = Astro.props;
 	typeof src !== "string" ? (
 		<Image
 			src={src}
-			widths={[
-				324,
-				690,
-				830,
-				830 * 2,
-			]}
+			widths={[324, 690, 830, 830 * 2]}
 			sizes="(max-width: 928px) 100vw, 830px"
 			alt={alt}
 			title={title}
