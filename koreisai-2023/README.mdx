@@ -233,12 +233,12 @@ import dynamic from "next/dynamic";
 const Map = dynamic(() => import("./_components/Map"), { ssr: false });
 
 export default function Page() {
-  return (
-    <main>
-      {/* ... */}
-      <Map />
-    </main>
-  )
+	return (
+		<main>
+			{/* ... */}
+			<Map />
+		</main>
+	);
 }
 ```
 
@@ -390,71 +390,71 @@ import { useEffect, useLayoutEffect } from "react";
 let wasReset = false;
 
 type GlobalErrorProps = {
-  error: Error & { digest?: string };
-  reset: () => void;
+	error: Error & { digest?: string };
+	reset: () => void;
 };
 
 export default function GlobalError({ reset }: GlobalErrorProps): ReactNode {
-  useLayoutEffect(() => {
-    if (wasReset) return;
-    wasReset = true;
+	useLayoutEffect(() => {
+		if (wasReset) return;
+		wasReset = true;
 
-    /* †死者蘇生† */
-    reset();
-  }, [reset]);
+		/* †死者蘇生† */
+		reset();
+	}, [reset]);
 
-  useEffect(() => {
-    const id = setTimeout(() => {
-      window.location.reload();
-    }, 60 * 1000);
+	useEffect(() => {
+		const id = setTimeout(() => {
+			window.location.reload();
+		}, 60 * 1000);
 
-    return () => {
-      clearTimeout(id);
-    };
-  }, []);
+		return () => {
+			clearTimeout(id);
+		};
+	}, []);
 
-  const handleReload = () => {
-    window.location.reload();
-  };
+	const handleReload = () => {
+		window.location.reload();
+	};
 
-  return (
-    <html lang="ja">
-      <body
-        style={{
-          width: "100%",
-          height: "100dvh",
-          display: "grid",
-          placeItems: "center",
-          padding: "1rem",
-        }}
-      >
-        <main
-          style={{
-            maxWidth: "80ch",
-            display: "grid",
-            placeItems: "center",
-            gap: "1rem",
-          }}
-        >
-          <p>
-            エラーが発生したようです。
-            再読み込みを行っても直らない場合は担当者に連絡してください。
-          </p>
-          <button
-            onClick={handleReload}
-            style={{
-              padding: "0.5rem 1rem",
-              border: "1px solid #ccc",
-              borderRadius: "5px",
-              cursor: "pointer",
-            }}
-          >
-            再読み込み
-          </button>
-        </main>
-      </body>
-    </html>
-  );
+	return (
+		<html lang="ja">
+			<body
+				style={{
+					width: "100%",
+					height: "100dvh",
+					display: "grid",
+					placeItems: "center",
+					padding: "1rem",
+				}}
+			>
+				<main
+					style={{
+						maxWidth: "80ch",
+						display: "grid",
+						placeItems: "center",
+						gap: "1rem",
+					}}
+				>
+					<p>
+						エラーが発生したようです。
+						再読み込みを行っても直らない場合は担当者に連絡してください。
+					</p>
+					<button
+						onClick={handleReload}
+						style={{
+							padding: "0.5rem 1rem",
+							border: "1px solid #ccc",
+							borderRadius: "5px",
+							cursor: "pointer",
+						}}
+					>
+						再読み込み
+					</button>
+				</main>
+			</body>
+		</html>
+	);
 }
 ```
 
