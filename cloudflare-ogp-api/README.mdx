@@ -127,20 +127,20 @@ Cloudflare Workersはメモリ制限が厳しいため、ストリームのま�
 // ...
 
 function consume(stream: ReadableStream) {
-  const reader = stream.getReader();
-  while (!(await reader.read()).done) {
-    /* noop */
-  }
+	const reader = stream.getReader();
+	while (!(await reader.read()).done) {
+		/* noop */
+	}
 }
 
 export const GET: APIRoute = async ({ request }) => {
-  // ...
+	// ...
 
-  const transformed = rewriter.transform(response);
-  await consume(transformed.body!);
+	const transformed = rewriter.transform(response);
+	await consume(transformed.body!);
 
-  // ...
-}
+	// ...
+};
 ```
 
 ### 開発環境でも動作するようにする
@@ -171,27 +171,29 @@ export const GET: APIRoute = async ({ request }) => {
 		},
 	};
 
-  if (import.meta.env.DEV) {
-    const { HTMLRewriter } = await import("html-rewriter-wasm");
-    const rewriter = new HTMLRewriter(() => {/* noop */})
-      .on("title", titleHandler)
-      .on("meta", metaHandler);
+	if (import.meta.env.DEV) {
+		const { HTMLRewriter } = await import("html-rewriter-wasm");
+		const rewriter = new HTMLRewriter(() => {
+			/* noop */
+		})
+			.on("title", titleHandler)
+			.on("meta", metaHandler);
 
-    try {
-      const buffer = new Uint8Array(await response.arrayBuffer());
-      await rewriter.write(buffer);
-      await rewriter.end();
-    } finally {
-      rewriter.free();
-    }
-  } else {
-    const rewriter = new HTMLRewriter()
-      .on("title", titleHandler)
-      .on("meta", metaHandler);
+		try {
+			const buffer = new Uint8Array(await response.arrayBuffer());
+			await rewriter.write(buffer);
+			await rewriter.end();
+		} finally {
+			rewriter.free();
+		}
+	} else {
+		const rewriter = new HTMLRewriter()
+			.on("title", titleHandler)
+			.on("meta", metaHandler);
 
-    const transformed = rewriter.transform(response);
-    await consume(transformed.body!);
-  }
+		const transformed = rewriter.transform(response);
+		await consume(transformed.body!);
+	}
 
 	const data = {
 		title,
