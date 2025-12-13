@@ -1,0 +1,329 @@
+---
+title: GitHub ActionsのSelf-hosted runnerでUnityをマルチプラットフォームビルドする
+tags:
+  - Tech
+  - Unity
+  - GitHub Actions
+  - CI/CD
+publishedAt: "2025-12-14"
+---
+
+import { Details, Aside, LinkCard, Tweet } from "@/components/posts";
+
+<Aside title="はじめに">
+この記事は農工大 Advent Calendar 2025の14日目の記事です。
+
+<LinkCard href="https://qiita.com/advent-calendar/2025/tuat" />
+</Aside>
+
+## はじめに
+
+私の大学では、11月に農工祭という農学部の学園祭があり、様々なサークルが展示や屋台を開催しています。
+我々MCC(Micro Computer Club)では毎年ゲームを出展しています。
+
+今年は、SpellRushという新作ゲームを出展しました。
+SpellRushはJoy-Conを杖に見立て、Joy-Conを振ることで魔法を撃ち合い戦う1vs1のゲームです。
+
+実際のゲームの様子は以下の動画をご覧ください。
+
+<iframe
+	class="aspect-video h-auto w-full"
+	src="https://www.youtube.com/embed/KbtC7EFGVnE?si=dOV21eLPT3Hq82fU"
+	title="YouTube video player"
+	frameborder="0"
+	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+	referrerpolicy="strict-origin-when-cross-origin"
+	allowfullscreen
+></iframe>
+
+このゲームの開発にはUnityを使用しており、ターゲットプラットフォームはWindows、macOS、Linuxです。
+開発中はコードが頻繁に変更されるため、意図せずバグが混入してしまう可能性があります。
+そのため、バグがいつ混入したのかを特定しやすくするため、変更ごとのビルド済みアプリケーション（アーティファクト）を残しておくことが望ましいです。
+
+そこで、GitHub Actionsを導入してビルドの自動化を行いましたが、GitHub Actions標準のHosted runnerでは以下の問題がありました。
+
+- ビルド時間が長く、無料枠をすぐに使い切ってしまう
+- マシンスペックの制約により、ビルド速度が遅い
+- ストレージ容量の制限により、巨大なプロジェクトのビルドが難しい
+
+これらの問題を解決するために、Self-hosted runnerを利用することにしました。
+本記事では、GitHub ActionsのSelf-hosted runnerを用いてUnityプロジェクトをマルチプラットフォーム向けにビルドする環境を構築した際の手順や、実際に運用して感じたメリット、ビルド時間を短縮するためのキャッシュ方法について紹介します。
+
+<Aside type="warn">
+今回は個人〜小規模向けのプロジェクトを想定しています。そのためSelf-hosted runnerのスケーリングなどは考慮していませんのでご注意ください。
+
+また、環境構築方法についてはWindowsとWSLで行っているため、Linuxの場合は適宜読み替えをお願いします。
+macOSについても紹介しませんが、Windowsとほぼ同じように環境構築できます。
+
+</Aside>
+
+## Self-hosted runnerとは
+
+GitHub Actionsは一般的にはGitHubが提供するマシン上で実行されますが、マシンスペックには制約があり、更にプライベートリポジトリでは実行時間ごとの課金が発生します(無料枠あり)。
+GitHubが提供するマシン上で実行されるrunnerはGitHub hosted runnerと呼ばれます。
+一方で、ユーザーが用意したマシン上でGitHub Actionsを実行することもでき、これをSelf-hosted runnerと呼びます。
+
+Self-hosted runnerは常時実行されているマシンさえあれば良く、マシンにrunnerプログラムをインストールするだけで動作します。
+ポート開放などの設定も不要なのでかなり簡単に始めることができます！
+
+## Self-hosted runnerの環境構築
+
+### Windowsでの環境構築
+
+runnerをインストールする前に、まずはUnityの環境構築を済ませておきましょう。
+Unity Hubをインストールし、プロジェクトで使用するバージョンのUnityをインストールしておきます。
+IL2CPPビルドを行う場合はC++のビルド環境も必要になるので、Visual Studio Installerからインストールしておきましょう。
+Unityをインストールする際に案内されるはずです。
+
+またUnityのライセンスも必要になるので、忘れずにUnity Hubからライセンスをアクティベーションしておきます。Personalライセンスで問題ありません。
+
+Unityの環境構築が済んだら、次はrunner用のユーザーを用意しましょう。
+これは必須ではありませんが、runner用のユーザーを用意しておくことで、環境が汚れずに済みます。
+
+```powershell
+# runnerというユーザーを作る
+# パスワードを聞かれるので適当に
+New-LocalUser -Name 'runner' -AccountNeverExpires
+
+# runnerをAdministratorsグループに追加する
+# Self-hosted Runnerの要件として、管理者権限が必要なため
+Add-LocalGroupMember -Group Administrators -Member runner
+```
+
+これでrunner用のユーザーが作成されました。
+以降はrunnerユーザーで作業します。現在のアカウントからログオフして変更してもいいですが、
+以下のコマンドでrunnerユーザーのPowershellを起動できるので、これを使って作業します。
+
+```powershell
+runas /user:runner pwsh
+```
+
+ユーザーを用意できたら、次はrunnerプログラムをインストールします。
+
+GitHubのリポジトリのSettingsからActionsのRunnersへ移動し、「New self-hosted runner」をクリックします。
+あとは画面の指示に従ってrunnerをダウンロード&インストールし、リポジトリに登録すれば完了です。
+注意点として、画面にも書かれていますがrunnerのインストールはCドライブ直下で行います。
+またセットアップのときにサービスにするか聞かれるので、Yesにしておきましょう。実行するユーザー名はrunnerにしておけばOKです。
+
+### WSLでの環境構築
+
+WSL上でUnity Hubをインストールするのは大変なので、ビルドする場合はDocker上でビルドするのが最適です。
+[GameCI](https://game.ci/)というところがUnityをビルドするためのDockerイメージやGitHub Actionsを提供しているので、これを利用します。
+
+まずはrunner用のWSLディストロを作りましょう。既存のディストロを使ってもいいですが、新しく作ったほうが環境が汚れません。
+
+```bash
+wsl --install -d Ubuntu --name runner
+```
+
+作れたらWSLの中に入って、初期セットアップ後、Dockerを導入します。
+
+```bash
+# WSLの中に入る
+# ユーザー名とかパスワードとかを設定します
+# なんでもいいですが、runnerとかにしておくとわかりやすいです
+wsl -d runner
+
+# aptの更新
+sudo apt update
+sudo apt upgrade
+# runnerの要件としてsudoのパスワードなし実行が求められるため、sudoersを編集します
+echo "%sudo ALL = (ALL) NOPASSWD: ALL" | sudo tee -a /etc/sudoers
+```
+
+Dockerの導入は以下のページをご覧ください。
+
+<LinkCard href="https://docs.docker.com/engine/install/ubuntu/" />
+
+Dockerはsudoなしで実行できるようにしておきましょう。
+
+```bash
+# WSLのユーザーでsudoなしでDockerを実行できるようにする
+sudo gpasswd -a runner docker
+```
+
+Dockerまで入れられたら、`/etc/wsl.conf`を編集します。
+編集したら一度WSLからログアウトし、`wsl --terminate runner`でWSLを止めます。
+その後もう一度`wsl -d runner`でWSLに入ります。
+
+```toml
+# systemdを有効化
+[boot]
+systemd=true
+
+# デフォルトのユーザー名
+[user]
+default=runner
+
+# 自動マウントを無効化
+[automount]
+enabled = false
+
+# WindowsのパスをWSLに追加しない
+[interop]
+appendWindowsPath = false
+```
+
+そうしたら、runnerをインストールします。
+インストール方法はWindowsの場合と変わりません。
+
+導入できたら、 svc.sh でサービスのインストールを行います。(起動はまだしなくていいです)
+
+```bash
+sudo ./svc.sh install
+```
+
+ここまで出来たら一旦WSLから抜けます。
+WSLはログインしているシェルが0になると勝手にスリープしてしまいます。
+そのため、タスクスケジューラでPCが起動したらWSLを叩いてログインシェルが0にならないようにします。
+
+```powershell
+# タスクスケジューラで実行するアクションを定義
+# ここではsleep infinityでWSLを無限に実行する
+$Action = New-ScheduledTaskAction -Execute "wsl.exe" -Argument "-d runner -u root -- sleep infinity"
+
+# タスクスケジューラの実行条件をPC起動時に定義
+$Trigger = New-ScheduledTaskTrigger -AtStartup
+
+# 実行ユーザーがログオンしていなくても実行するには認証情報が必要なので取得
+# ユーザー名とパスワードを入力する
+$Cred = Get-Credential
+
+# タスクスケジューラを定義
+Register-ScheduledTask -TaskName "actions-runner-wsl" -Action $Action -Trigger $Trigger -RunLevel Highest -User $Cred.UserName -Password $Cred.GetNetworkCredential().Password
+
+# タスクスケジューラを初回実行
+Start-ScheduledTask -TaskName actions-runner-wsl
+```
+
+これでタスクスケジューラによってPCが起動したらWSLが自動起動して、runnerが常駐するようになります。
+
+## GitHub Actionsのワークフローを定義
+
+Self-hosted runnerをGitHub Actionsで利用する場合は、`runs-on`に`self-hosted`を使用します。
+また、`[self-hosted, windows, x64]`というようにOSとアーキテクチャを指定することで、特定のOSとアーキテクチャのrunnerを使用することができます。
+リポジトリのRunners一覧から利用可能なランナーとそのランナーに割り振られているラベルを確認できるため、それを元に`runs-on`を指定してください。
+
+### Windowsでのビルドワークフロー
+
+Windowsでのビルドワークフローは以下のようになります。
+基本的にはUnityをバッチモードで動かしているだけですが、`/Library`をシンボリックリンクによってキャッシュすることで、ビルド時間の短縮を行っています。
+以下のワークフローだとホームディレクトリに`actions-cache`というディレクトリを作成し、その中に`Library`というディレクトリを作成して、それをシンボリックリンクによってリンクしています。
+変更したい場合は`$cacheRoot`を変更してください。
+
+```yaml
+name: build
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  windows:
+    runs-on: [self-hosted, windows, x64]
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup | Cache Link
+        run: |
+          $ws        = (Resolve-Path '.')
+          $cacheRoot = Join-Path $env:USERPROFILE 'actions-cache'
+          $cacheLib  = Join-Path $cacheRoot 'Library'
+          $wsLib     = Join-Path $ws 'Library'
+
+          if (-not (Test-Path -LiteralPath $cacheRoot)) { New-Item -ItemType Directory -Path $cacheRoot -Force | Out-Null }
+          if (-not (Test-Path -LiteralPath $cacheLib))   { New-Item -ItemType Directory -Path $cacheLib -Force | Out-Null }
+
+          # キャッシュをリンク
+          if (Test-Path -LiteralPath $wsLib) {
+            Remove-Item -LiteralPath $wsLib -Recurse -Force | Out-Null
+          }
+          New-Item -ItemType Junction -Path $wsLib -Target $cacheLib | Out-Null
+
+      - name: Run | Build
+        run: |
+          # 使用するUnityのバージョンに合わせてパスを変更する
+          $unity = 'C:\Program Files\Unity\Hub\Editor\6000.2.6f2\Editor\Unity.exe'
+
+          # ビルド実行
+          & $unity -batchmode -quit -nographics -projectPath . -buildWindows64Player 'build\Application.exe' -logFile - | Out-Host
+```
+
+### WSLでのビルドワークフロー
+
+WSLでのビルドフローは以下のようになります。
+注意点として、GameCIのアクションを使用する場合、コンテナ上でUnityのライセンスアクティベーションを行うため、ユーザー名、パスワード、ライセンスファイルデータが必要になります。
+詳しくは[GameCIのドキュメント](https://game.ci/docs/github/activation)をご覧ください。
+また、GitHub hosted runnerと違い、`runAsHostUser: true`のオプションが必要です。
+これがないとコンテナ上のユーザーが`root`で実行されるため、ビルド後に生成されるファイルが`root`所有になり、次回以降の実行時にパーミッションエラーが発生します。
+
+あとはWindowsの場合と同じようにキャッシュフォルダを作成してビルド時間の短縮を行っています。コンテナ上の実行である関係上、シンボリックリンクではなく、rsyncを使ってコピーによって行っていることに留意してください。
+
+```yaml
+name: build
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  linux:
+    name: Linux
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup | Cache Restore
+        run: |
+          ws="$(pwd)"
+          cacheRoot="$HOME/actions-cache"
+          cacheLib="$cacheRoot/Library"
+          wsLib="$ws/Library"
+
+          mkdir -p "$cacheLib"
+          mkdir -p "$wsLib"
+
+          # キャッシュが存在する場合は復元
+          if [ -n "$(find "$cacheLib" -mindepth 1 -print -quit 2>/dev/null)" ]; then
+            rsync -a "$cacheLib/" "$wsLib/"
+          fi
+
+      - name: Run | Build
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          targetPlatform: StandaloneLinux64
+          # 使用するUnityのバージョンに合わせて変更する
+          unityVersion: 6000.2.6f2
+          runAsHostUser: true
+          buildName: Application
+          customParameters: -nographics
+
+      - name: Finish | Cache Save
+        run: |
+          ws="$(pwd)"
+          cacheRoot="$HOME/actions-cache"
+          cacheLib="$cacheRoot/Library"
+          wsLib="$ws/Library"
+
+          mkdir -p "$cacheLib"
+          rsync -a --delete "$wsLib/" "$cacheLib/"
+```
+
+## おわりに
+
+Self-hosted runnerを導入することで、GitHub Actionsの無料枠やストレージ制限を気にすることなく、かつ高速にビルドを回すことができるようになりました。
+特にUnityのような巨大なプロジェクトでは、ローカルマシンのパワーを活かせるSelf-hosted runnerは非常に相性が良いと感じました。
+
+以前はビルド待ちで待つような時間が発生していましたが、導入後は強力なマシンパワーのおかげでビルド時間が大幅に短縮され、開発のフィードバックループを回すのが非常に快適になりました。
+変更ごとのアーティファクトが手元に残る安心感も大きいです。
+
+環境構築には少し手間がかかりますが、一度作ってしまえばその恩恵は計り知れません。
+CI/CD環境を整えて、よりゲーム開発の時間に集中しましょう！
