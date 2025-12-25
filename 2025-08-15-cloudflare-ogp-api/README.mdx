@@ -1,0 +1,291 @@
+---
+title: Cloudflare WorkersのHTMLRewriterを使って動的なリンクカードを作る
+tags:
+  - Tech
+  - Cloudflare
+  - Astro
+---
+
+import { LinkCard } from "@/components/posts";
+
+## はじめに
+
+このブログにはリンクカード機能があり、MDXの`<LinkCard>`コンポーネントを使ってZennやQiitaのようなリンクカードを表示できます。
+
+<LinkCard href="https://blog.s2n.tech/posts/blog-v3" />
+
+このブログのリニューアル当初、リンクカードはビルド時にリンク先のOGPを取得・解析して静的に生成していました。
+しかし、この方法だとビルド時にしかリンクカードが更新されなかったり、画像がある場合はリンク先からの直リンクになってリンク先に負荷がかかったり、レートリミットに引っかかって画像が表示されないなどの問題がありました。
+実際、GitHubのOG画像は厳しめのレートリミットがあるようで、時々ブログにアクセスしてもOG画像が表示されないことがありました。
+
+それなら動的に取得すればよいのではと思いますが、これも簡単ではありません。
+このブログはAstro + Cloudflare Workersで動作していますが、静的生成時に使用していた`open-graph-scraper`はNode.jsのAPIに依存しているため、Cloudflare Workersでは使用できないのです。
+
+そこで、Cloudflare WorkersのHTMLRewriterを使ってリンクカードを動的に生成する方法を考えました。
+HTMLRewriterはCloudflare Workers APIの軽量なHTMLパーサーです。
+本来は[リンクの書き換え](https://developers.cloudflare.com/workers/examples/rewrite-links/)や[サイトのローカライズ](https://developers.cloudflare.com/pages/tutorials/localize-a-website/)用途で使われますが、工夫すればOGPの取得にも活用できます。
+
+## 実装
+
+実装方針としては、AstroのEndpoint機能を使ってOGP取得APIを用意し、APIリクエストが来たらHTMLRewriterを使ってOGPを取得するようにします。
+
+最小の実装としては、以下のようになります。
+
+```ts
+import type { APIRoute } from "astro";
+import { z } from "zod";
+
+const searchParamsSchema = z.object({
+	url: z.url(),
+});
+
+export const GET: APIRoute = async ({ request }) => {
+	const searchParams = new URL(request.url).searchParams;
+	const parsed = searchParamsSchema.safeParse(
+		Object.fromEntries(searchParams.entries()),
+	);
+	if (!parsed.success) {
+		return new Response("Bad Request", { status: 400 });
+	}
+
+	const { url } = parsed.data;
+	const response = await fetch(url);
+
+	if (!response.ok) {
+		return new Response("Not Found", { status: 404 });
+	}
+
+	let title: string | null = null;
+	let description: string | null = null;
+	let ogTitle: string | null = null;
+	let ogDescription: string | null = null;
+	let ogImage: string | null = null;
+
+	const rewriter = new HTMLRewriter()
+		.on("title", {
+			text(text) {
+				title = text.text;
+			},
+		})
+		.on("meta", {
+			element(element) {
+				const name = element.getAttribute("name");
+				const property = element.getAttribute("property");
+				const content = element.getAttribute("content");
+
+				const propertyKey = (name ?? property)?.toLowerCase();
+				if (!propertyKey) return;
+				switch (propertyKey) {
+					case "description":
+						description = content;
+						break;
+					case "og:title":
+						ogTitle = content;
+						break;
+					case "og:description":
+						ogDescription = content;
+						break;
+					case "og:image":
+						ogImage = content;
+						break;
+				}
+			},
+		});
+
+	const transformed = rewriter.transform(response);
+	await transformed.text();
+
+	const data = {
+		title,
+		description,
+		ogTitle,
+		ogDescription,
+		ogImage,
+	};
+
+	return new Response(JSON.stringify(data), {
+		headers: {
+			"Content-Type": "application/json",
+		},
+	});
+};
+```
+
+ここで重要なのは、`await transformed.text()`の部分です。
+`HTMLRewriter`はストリーミング型のパーサーのため、`.transform()`を呼び出しただけでは解析が完了しません。
+返り値の`Response`を`.text()`で消費することで初めて解析が完了します。
+解析中に`title`や`meta`要素が見つかると、その内容を取得して変数に格納し、OGPデータを抽出できます。
+
+### ストリームのまま取り扱う
+
+これでOGPの取得はできますが、`.text()`でストリームを消費すると、HTMLの内容がすべてメモリに読み込まれてしまいます。
+Cloudflare Workersはメモリ制限が厳しいため、ストリームのまま処理する方が効率的です。
+`.transform()`の返り値の`Response`の`.body`は`ReadableStream`なので、これを空読みしてストリームを消費しましょう。
+
+```ts
+// ...
+
+function consume(stream: ReadableStream) {
+	const reader = stream.getReader();
+	while (!(await reader.read()).done) {
+		/* noop */
+	}
+}
+
+export const GET: APIRoute = async ({ request }) => {
+	// ...
+
+	const transformed = rewriter.transform(response);
+	await consume(transformed.body!);
+
+	// ...
+};
+```
+
+### 開発環境でも動作するようにする
+
+Astroの開発サーバーはWorkersや`wrangler dev`とは異なる実行環境のため、`HTMLRewriter`が利用できません。
+そこで、`html-rewriter-wasm`を使用して、開発サーバーではWASM版の`HTMLRewriter`を使用します。
+
+なお、WASM版の`HTMLRewriter`はAPIや型が若干異なる点にご注意ください。
+
+```ts
+export const GET: APIRoute = async ({ request }) => {
+	// ...
+
+	let title: string | null = null;
+	let description: string | null = null;
+	let ogTitle: string | null = null;
+	let ogDescription: string | null = null;
+	let ogImage: string | null = null;
+
+	const titleHandler = {
+		text(text) {
+			title = text.text;
+		},
+	};
+	const metaHandler = {
+		element(element) {
+			// ...
+		},
+	};
+
+	if (import.meta.env.DEV) {
+		const { HTMLRewriter } = await import("html-rewriter-wasm");
+		const rewriter = new HTMLRewriter(() => {
+			/* noop */
+		})
+			.on("title", titleHandler)
+			.on("meta", metaHandler);
+
+		try {
+			const buffer = new Uint8Array(await response.arrayBuffer());
+			await rewriter.write(buffer);
+			await rewriter.end();
+		} finally {
+			rewriter.free();
+		}
+	} else {
+		const rewriter = new HTMLRewriter()
+			.on("title", titleHandler)
+			.on("meta", metaHandler);
+
+		const transformed = rewriter.transform(response);
+		await consume(transformed.body!);
+	}
+
+	const data = {
+		title,
+		description,
+		ogTitle,
+		ogDescription,
+		ogImage,
+	};
+
+	return new Response(JSON.stringify(data), {
+		headers: {
+			"Content-Type": "application/json",
+		},
+	});
+};
+```
+
+### キャッシュする
+
+APIにリクエストがある度にOGPを取得するのは非効率なので、キャッシュを行うようにします。
+キャッシュはCloudflare Workers KVを使って行います。
+
+キャッシュキーにはURLのハッシュを使います。
+URLの表現は複数あるため、UnJSのURLライブラリである[ufo](https://github.com/unjs/ufo)を使って正規化し、その後Web Crypto APIを使ってSHA-256でハッシュ化します。
+KVではTTLの設定が可能なため、キャッシュの有効期限を1週間に設定し、この期間はリンク先にアクセスせずにOGPを取得できるようにします。
+さらにAPIのレスポンス自体もキャッシュすることで、APIへのリクエスト数を減らすことができます。
+
+```ts
+import { normalizeURL } from "ufo";
+
+async function getURLHash(url: string): Promise<string> {
+	const encoder = new TextEncoder();
+	const data = encoder.encode(url);
+	const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+	const hashArray = Array.from(new Uint8Array(hashBuffer));
+	return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+export const GET: APIRoute = async ({ request, locals }) => {
+	// ...
+	const normalizedURL = normalizeURL(url);
+
+	const cache = locals.runtime.env.CACHE;
+	const cacheKey = `open-graph:${await getURLHash(normalizedURL)}`;
+	const cachedData = await cache.get(cacheKey);
+
+	if (cachedData) {
+		return new Response(cachedData, {
+			headers: {
+				"Content-Type": "application/json",
+				"Cache-Control": "public, max-age=600, stale-while-revalidate=600",
+			},
+		});
+	}
+
+	// ...
+
+	const data = {
+		title,
+		description,
+		ogTitle,
+		ogDescription,
+		ogImage,
+	};
+	await cache.put(cacheKey, JSON.stringify(data), {
+		expirationTtl: 60 * 60 * 24 * 7, // 1週間
+	});
+
+	return new Response(JSON.stringify(data), {
+		headers: {
+			"Content-Type": "application/json",
+			"Cache-Control": "public, max-age=600, stale-while-revalidate=600",
+		},
+	});
+};
+```
+
+### OG画像を取得する
+
+取得したOGPを使って、OG画像も取得するようにします。OG画像も同様にKVやヘッダーを使ってキャッシュします。実装自体はOGPの取得とあまり変わらないので、コードは省略しますが、完成形は以下のようになります。
+
+<LinkCard href="https://github.com/shun-shobon/blog.s2n.tech/blob/af6612bee87a25b141d0444209cf31b5cd53e581/src/pages/api/open-graph.ts" />
+
+あとはこのAPIを使ってフロントエンド側でOGPの取得と表示を行うようにすれば完成です。
+
+## まとめ
+
+`HTMLRewriter`を使うことで、Cloudflare WorkersでもOGPの取得ができるようになりました。
+`HTMLRewriter`は本来リンク書き換えやサイトローカライズ用のAPIですが、軽量なHTMLパーサーとしてOGP取得にも活用できる優秀なAPIです。
+従来のNode.js依存のライブラリが使えないCloudflare Workers環境でも、このような工夫により機能豊富なWebアプリケーションを構築することが可能になります。
+
+## 参考
+
+<LinkCard href="https://workers.tools/guides/2022-02-19-how-to-use-htmlrewriter-for-web-scraping" />
+
+<LinkCard href="https://yajihum.dev/blog/posts/tech/20231213_create_linkcard" />
