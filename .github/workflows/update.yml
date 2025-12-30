@@ -29,7 +29,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: 'blog.s2n.tech',
-              workflow_id: 'update-posts',
+              workflow_id: 'update-posts.yml',
               ref: 'main',
             });
             core.notice('Dispatched update-posts workflow');
