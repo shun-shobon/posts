@@ -30,6 +30,6 @@ jobs:
               owner: context.repo.owner,
               repo: 'blog.s2n.tech',
               workflow_id: 'update-posts',
-              ref: context.ref,
+              ref: 'main',
             });
             core.notice('Dispatched update-posts workflow');
