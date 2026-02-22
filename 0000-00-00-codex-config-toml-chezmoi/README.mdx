@@ -1,0 +1,85 @@
+---
+title: ".codex/config.tomlをchezmoiで管理する"
+tags:
+  - Tech
+  - Codex
+  - chezmoi
+---
+
+import { LinkCard } from "@/components/posts";
+
+## はじめに
+
+`~/.codex/config.toml`は、モデルやfeatureフラグの設定などが含まれるファイルのため、dotfilesとして管理したくなります。
+ただ、Codex CLIはプロジェクトのtrust設定をこのファイルに勝手に追記します。
+
+```toml title="~/.codex/config.toml"
+model = "gpt-5.3-codex"
+model_reasoning_effort = "high"
+
+# ...
+
+# 初めてCodex CLIを実行するディレクトリだとプロンプトが出て、許可すると勝手に追記される
+[projects."/path/to/project"]
+trust_level = "trusted"
+
+# ちなみに許可しなくても追記される
+[projects."/path/to/project"]
+trust_level = "untrusted"
+```
+
+この追記が入るせいで、chezmoiなどでそのまま管理しようとしても差分が出てかなり面倒です。
+
+chezmoi 公式では、ファイルを丸ごとではなく部分的に管理する方法として、`modify_`属性を使う方法が紹介されています。
+
+<LinkCard href="https://www.chezmoi.io/user-guide/manage-different-types-of-file/#manage-part-but-not-all-of-a-file" />
+
+今回はこの`modify_`属性を使って、`~/.codex/config.toml`を部分管理する方法を紹介します。
+
+## `modify_`で部分管理する
+
+`modify_`を付けたファイルはスクリプトとして実行されます。スクリプトには標準入力で既存ファイルの内容が渡されます。そしてスクリプトの標準出力がファイルの内容として適用されます。
+また、`chezmoi:modify-template`が含まれる場合、chezmoiのテンプレートとして解釈され、既存ファイル内容は`.chezmoi.stdin`で参照できます。
+
+実際にはこんな感じで書けば、部分的な管理ができます。
+
+```toml title="dot_codex/modify_config.toml"
+{{- /* chezmoi:modify-template */ -}}
+# chezmoi-managed:start
+model = "gpt-5.3-codex"
+model_reasoning_effort = "high"
+web_search = "live"
+
+[features]
+multi_agent = true
+prevent_idle_sleep = true
+# chezmoi-managed:end
+
+{{- .chezmoi.stdin | replaceAllRegex "(?s)^# chezmoi-managed:start.*?# chezmoi-managed:end\n*" "\n\n" -}}
+```
+
+これで、`# chezmoi-managed:start`から`# chezmoi-managed:end`までをchezmoiの管理領域としつつ、
+それ以外の行は既存ファイルから引き継げます。
+
+## このテンプレートがやっていること
+
+最初のブロック（`chezmoi-managed:start` 〜 `end`）は、管理対象のコンフィグです。
+モデルやfeatureのように「自分で決めた値を維持したい設定」をここに置きます。
+ブロックの先頭と最後のコメントはchezmoiが管理しているブロックであることを示して、後ろのスクリプトで置き換えるためのマーカーです。
+
+最後の1行は`.chezmoi.stdin`（現在の`~/.codex/config.toml`）から、以前に出力した管理ブロックだけを正規表現で削って、残りを後ろに連結しています。
+その結果、Codex CLIが追記した`projects.*`の`trust_level`は残り、chezmoiの管理領域だけが更新されます。
+
+## 注意点
+
+最初の実行時はマーカーコメントが無いため、管理対象のコンフィグが既存のコンフィグの先頭に差し込まれる形になります。
+手動で`~/.codex/config.toml`を編集して、整合性を保つようにしてください。
+なお、`modify_`属性を使用した場合、`chezmoi re-add`での追加ができなくなってしまいます。
+Codex CLI側でモデル名やfeatureフラグを編集した場合は差分が出てしまうので、手動でchezmoi側を編集する必要があります。
+
+## おわりに
+
+`modify_`属性を使うことで`~/.codex/config.toml`の部分管理が可能です。
+実際に私が運用している`modify_config.toml`も置いておくので参考にしてみてください。
+
+<LinkCard href="https://github.com/shun-shobon/dotfiles/blob/630e0873b8f84b8bb8ce54ce0fc378fc020590ce/dot_codex/modify_config.toml" />
