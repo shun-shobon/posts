@@ -1,0 +1,117 @@
+---
+title: "RulesとSkillsでボクの考えた最強のNode.jsの環境構築をCodexに教え込む"
+tags:
+  - Tech
+  - Codex
+  - Node.js
+---
+
+import { LinkCard } from "@/components/posts";
+
+## はじめに
+
+Claude CodeやCodex CLIを始めとしたAIコーディングエージェント、非常に便利ですね。
+自分も最近は日常的にCodex CLIを使っていて、思いついたものをすぐに形にできるところが気に入っています。
+
+一方で環境構築をエージェントに任せると、どうも自分の手癖に合わないものになりがちです。
+特にNode.jsでは選択肢が多いせいか、毎回同じ形にならないことが多いです。
+
+たとえば、パッケージマネージャはどうするか？(npm/yarn/pnpm)、Node.jsのバージョン管理はどうするか？(nvm/asdf/mise)、LinterやFormatterの構成はどうするか？(eslint/prettier/oxc)などです。
+これらは自分の手癖によるこだわりが大きく、好みにあっていないとどうも気持ち悪いです。
+
+さらに2025年は、Shai-hulud 2.0のようなnpmエコシステムにおけるサプライチェーン攻撃が大きく報じられました。
+環境構築は手癖に合わせる以外にも、手順そのものに安全策を織り込む必要があります。
+
+本記事では、SkillsとRulesを組み合わせて、CodexにNode.js環境構築の方針を定着させる方法を紹介します。
+
+## Skillsで環境構築と依存管理の手順を教える
+
+SkillsはClaude CodeやCodex CLIなど幅広いコーディングエージェントで使用できる機能です。
+`SKILL.md`に手順を記述することで、エージェントがその手順に従って環境構築を行うことができます。
+
+<LinkCard href="https://developers.openai.com/codex/skills" />
+
+自分は2つのスキルを使っています。
+
+- `nodejs-project-bootstrap`
+- `pnpm-dependency-ops`
+
+前者でプロジェクトの初期化ルールを、後者で依存追加の手順を説明しています。
+`nodejs-project-bootstrap`内で`pnpm-dependency-ops`を呼び出すようにしており、初期化時に依存関係をインストール場合にも同じ手順を使えるようにしています。
+
+実際のSkillsはdotfilesで管理しています。
+
+<LinkCard href="https://github.com/shun-shobon/dotfiles/tree/f4789d765a8f3fc4696fbb0822d71e74b6f62c3a/dot_agents/skills" />
+
+`nodejs-project-bootstrap` 側では、だいたいこんなことをしています。
+
+- Node.jsは`mise + .tool-versions`で管理
+- `package.json`は`type: "module"`を必ず設定し、ESMを使うようにする
+- `packageManager`に`pnpm@<version>`を明記してpnpmのバージョンを固定する
+- TypeScriptは`tsconfig.json`の設定を`@tsconfig/*`を使って共通化する
+- `oxlint`と`oxfmt`を最初から入れて、Type Aware LintingとImport Sortを有効化する
+
+サプライチェーン攻撃対策のため、`pnpm-workspace.yaml`で最低限の設定も行うようにしています。
+
+```yaml title="pnpm-workspace.yaml"
+minimumReleaseAge: 1440
+saveExact: true
+strictDepBuilds: true
+trustPolicy: no-downgrade
+trustPolicyIgnoreAfter: 10080
+```
+
+`minimumReleaseAge`と`trustPolicy`はもちろんのこと、`strictDepBuilds`は依存関係にインストールスクリプトがある際に必ずインストールが失敗するため、インストールスクリプトの許可をし忘れるような見落としを防ぐことができます。
+
+`pnpm-dependency-ops`では、`package.json`の手編集を禁止して、必ず`pnpm add`を使わせています。
+これは古いバージョンをインストールしようとしたり、`package.json`の依存関係の並び順が狂ってしまったりするのを防ぐためです。
+インストール時に`ERR_PNPM_IGNORED_BUILDS`が出たときは、対象パッケージの実際のスクリプトを確認してから`allowBuilds`に足す、という手順まで書いてあります。
+
+```yaml title="pnpm-workspace.yaml"
+allowBuilds:
+  esbuild: true
+```
+
+## Rulesでnpmの実行を禁止する
+
+Skillsを整備しても、`npm`や`npx`を使おうとすることがあります。
+これらはRulesで機械的に防ぐほうが確実です。
+
+Rulesは、Codexがコマンドを実行するときの判断を`allow`、`prompt`、`forbidden`で制御する機能です。
+Claude Codeなどにも似たような機能がありますが、Rulesでは拒否時に拒否理由をエージェントに伝えることができます。
+そのためここで「`npm`ではなく`pnpm`を代わりに使ってほしい」という理由を書いておくことで、
+エージェント側も拒否理由を踏まえて処理を立て直しやすくなります。
+
+<LinkCard href="https://developers.openai.com/codex/rules" />
+
+筆者の`npm.rules`は次のような内容です。
+
+```text title="~/codex/rules/npm.rules"
+# npmを禁止するルール
+prefix_rule(
+  pattern = ["npm"],
+  decision = "forbidden",
+  justification = "Use `pnpm` instead of `npm`.",
+  match = ["npm install", "npm start", "npm run dev"],
+)
+
+# npxを禁止するルール
+prefix_rule(
+  pattern = ["npx"],
+  decision = "forbidden",
+  justification = "Use `pnpm dlx` instead of `npx`.",
+  match = ["npx tsx"],
+)
+```
+
+実際のRulesはこちらにあります。
+
+<LinkCard href="https://github.com/shun-shobon/dotfiles/blob/f4789d765a8f3fc4696fbb0822d71e74b6f62c3a/dot_codex/rules/npm.rules" />
+
+## おわりに
+
+今回はRulesとSkillsを組み合わせて、CodexにNode.js環境構築の方針を定着させる方法を紹介しました。
+Rulesは若干マイナーな機能ですが、`justification`が非常に便利だと思っています。
+今回はnpmの実行を禁止するルールでしたが、Pythonで`uv`を使うことを強制させたりもできると思います。
+
+みなさんも良いAIコーディングライフを！
